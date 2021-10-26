@@ -37,7 +37,7 @@ object WorkoutLog {
 
     //FOR WHEN THE USER WANTS TO LOG A WORKOUT
     while (logWorkout == true){
-      println("Press 1 to log a workout, 2 to check user workout logs")
+      println("Press 1 to log a workout, 2 to check user workout logs, 3 to change user, 4 to see all workout logs of all users, 5 if you are finished")
       option = scala.io.StdIn.readLine()
       while(option =="1") {
         if (workoutDate == "") {
@@ -59,9 +59,19 @@ object WorkoutLog {
       }
       if (option == "2"){
         checkUser(user, connection)
-        logWorkout = false
       }
-
+      else if (option =="3") {
+        println("Enter a new user or an existing one: ")
+        user = scala.io.StdIn.readLine()
+      }
+      else if (option == "4"){
+        printAllWorkoutLog(connection)
+        println("Print complete!")
+      }
+      else if (option == "5")
+        logWorkout=false
+      else
+        println("Invalid Input")
     }
 
     println("THANK YOU FOR LOGGING YOUR WORKOUT!!")
@@ -74,6 +84,7 @@ object WorkoutLog {
     var pstmt = connection.prepareStatement("SELECT * FROM workouts WHERE user=?")
     pstmt.setString(1,x)
     var rs = pstmt.executeQuery()
+    println("Date       Workout      WT(lbs) Set   Rep   User")
     while (rs.next) {
       val workoutDate = rs.getDate("workoutDate")
       val workoutName= rs.getString("workoutName")
@@ -81,7 +92,7 @@ object WorkoutLog {
       val workoutSet = rs.getInt("workoutSet")
       val workoutRep = rs.getInt("workoutRep")
       val user = rs.getString("user")
-      println("Date: %s | Workout: %s | Weight: %s lbs | Set: %s | Rep: %s | User: %s".format(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, user))
+      println("%10s %-12s %-6s  %-5s %-5s %s".format(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, user))
     }
 
   }
@@ -104,14 +115,14 @@ object WorkoutLog {
     var workoutGroup = x
     var workoutName = ""
     val workoutGroupList = List("chest", "legs","arms","back")
-    val workoutList = List("bench press", "incline press","dumbbell flies", "squat","leg press", "leg curl", "bicep curl", "tricep extension", "hammer curl", "deadlift", " pull downs", "rows")
+    val workoutList = List("bench press", "incline press","dumbbell fly", "squat","leg press", "leg curl", "bicep curl", "tricep extension", "hammer curl", "deadlift", "pull downs", "rows")
     while(!workoutGroupList.contains(workoutGroup)){
-      println("Invalid category. Please select a valid category: 'chest' 'legs' 'arms' legs'")
+      println("Invalid category. Please select a valid category: 'chest' 'legs' 'arms' 'back'")
       workoutGroup = scala.io.StdIn.readLine()
     }
     do {
       if (workoutGroup == "chest")
-        println("Which workout? 'bench press' 'incline press' 'dumbbell flies'")
+        println("Which workout? 'bench press' 'incline press' 'dumbbell fly'")
       else if (workoutGroup == "legs")
         println("Which workout? 'squat' 'leg press' 'leg curl'")
       else if (workoutGroup == "arms")
@@ -133,7 +144,22 @@ object WorkoutLog {
     println("How many reps did you do per set?")
     var workoutRep = scala.io.StdIn.readLine()
     logWorkoutDB(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, connection, user)
+  }
 
+  //METHOD THAT PRINTS OUT ALL THE LOGS OF ALL USER
+  def printAllWorkoutLog(connection: Connection): Unit = {
+    val statement = connection.createStatement
+    val rs = statement.executeQuery("SELECT * FROM workouts")
+    println("Date       Workout      WT(lbs) Set   Rep   User")
+    while (rs.next) {
+      val workoutDate = rs.getDate("workoutDate")
+      val workoutName= rs.getString("workoutName")
+      val workoutWeight = rs.getInt("workoutWeight")
+      val workoutSet = rs.getInt("workoutSet")
+      val workoutRep = rs.getInt("workoutRep")
+      val user = rs.getString("user")
+      println("%10s %-12s %-6s  %-5s %-5s %s".format(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, user))
+    }
   }
 
 
