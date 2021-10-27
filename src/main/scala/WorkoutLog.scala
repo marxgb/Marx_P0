@@ -1,6 +1,5 @@
-import java.sql.{Connection,DriverManager, SQLException, PreparedStatement}
-import java.text.DateFormat
-import java.text.SimpleDateFormat
+import java.sql.{Connection,DriverManager}
+
 object WorkoutLog {
   def main(args: Array[String]): Unit={
 
@@ -10,19 +9,9 @@ object WorkoutLog {
     val username = "root"
     val password = "coff33addicT"
     var connection:Connection = null
-    try {
-      Class.forName(driver)
-      connection = DriverManager.getConnection(url, username, password)
-      val statement = connection.createStatement
-      val rs = statement.executeQuery("SELECT host,age FROM test")
-      while (rs.next) {
-        val host = rs.getString("host")
-        val age = rs.getString("age")
-        println("host = %s, age = %s".format(host, age))
-      }
-    } catch {
-      case e: Exception => e.printStackTrace
-    }
+
+    connection = DriverManager.getConnection(url, username, password)
+    val statement = connection.createStatement
 
     //GET USER
     println("Enter your user:")
@@ -37,7 +26,7 @@ object WorkoutLog {
 
     //FOR WHEN THE USER WANTS TO LOG A WORKOUT
     while (logWorkout == true){
-      println("Press 1 to log a workout, 2 to check user workout logs, 3 to change user, 4 to see all workout logs of all users, 5 if you are finished")
+      println("Press 1 to log a workout, 2 to check user workout logs, 3 to change user, 4 to see all workout logs of all users, 5 if you are finished, 6 if you wanna delete user logs")
       option = scala.io.StdIn.readLine()
       while(option =="1") {
         if (workoutDate == "") {
@@ -48,14 +37,16 @@ object WorkoutLog {
         var workoutGroup = scala.io.StdIn.readLine()
         var workoutName = checkCategory(workoutGroup)
         createWorkoutRecord(workoutDate, workoutName, connection, user)
-        println("Your workout has been success fully log! Do you wanna log more workout? y or n")
         var continueLog = scala.io.StdIn.readLine()
+        workoutDate = ""
         if (continueLog == "n")
-          option = "0"
-        else if (continueLog == "y")
+          option = "doneLog"
+         else if (continueLog == "y")
           print("Logging more workouts. ")
-        else
-          println("invalid command. Do you wanna log more workout? y or n")
+        else {
+          print("Invalid input!")
+          option = "doneLog"
+        }
       }
       if (option == "2"){
         checkUser(user, connection)
@@ -63,6 +54,7 @@ object WorkoutLog {
       else if (option =="3") {
         println("Enter a new user or an existing one: ")
         user = scala.io.StdIn.readLine()
+        workoutDate=""
       }
       else if (option == "4"){
         printAllWorkoutLog(connection)
@@ -70,47 +62,21 @@ object WorkoutLog {
       }
       else if (option == "5")
         logWorkout=false
+      else if (option == "6")
+        deleteUserLog(user,connection)
+      else if (option =="doneLog")
+        println("")
       else
-        println("Invalid Input")
+        println("Invalid option!")
+
     }
 
     println("THANK YOU FOR LOGGING YOUR WORKOUT!!")
   }
 
   //END OF MAIN
-  //LIST OF METHODS
-  def checkUser(x : String, connection: Connection): Unit = {
-    val statement = connection.createStatement
-    var pstmt = connection.prepareStatement("SELECT * FROM workouts WHERE user=?")
-    pstmt.setString(1,x)
-    var rs = pstmt.executeQuery()
-    println("Date       Workout      WT(lbs) Set   Rep   User")
-    while (rs.next) {
-      val workoutDate = rs.getDate("workoutDate")
-      val workoutName= rs.getString("workoutName")
-      val workoutWeight = rs.getInt("workoutWeight")
-      val workoutSet = rs.getInt("workoutSet")
-      val workoutRep = rs.getInt("workoutRep")
-      val user = rs.getString("user")
-      println("%10s %-12s %-6s  %-5s %-5s %s".format(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, user))
-    }
 
-  }
-
-  //METHOD THAT INSERTS A RECORD INTO THE WORKOUTS TABLE
-  def logWorkoutDB(date : String, name : String, weight : String, rep : String, set: String, connection: Connection, user : String): Unit ={
-    var statement = connection.createStatement
-    var pstmt = connection.prepareStatement("INSERT INTO workouts(workoutDate,workoutName,workoutWeight,workoutSet,workoutRep, user) VALUES(?,?,?,?,?,?)")
-    pstmt.setDate(1, java.sql.Date.valueOf(date))
-    pstmt.setString(2, name)
-    pstmt.setInt(3, weight.toInt)
-    pstmt.setInt(4, rep.toInt)
-    pstmt.setInt(5, set.toInt)
-    pstmt.setString(6, user)
-    pstmt.executeUpdate
-  }
-
-  //METHOD THAT CHECK FOR CATEGORY AND CORRECT WORKOUT NAME
+  //OPTION 1 step 1: METHOD THAT CHECK FOR CATEGORY AND CORRECT WORKOUT NAME
   def checkCategory(x: String): String = {
     var workoutGroup = x
     var workoutName = ""
@@ -129,13 +95,19 @@ object WorkoutLog {
         println("Which workout? 'bicep curl' 'tricep extension' 'hammer curl'")
       else if (workoutGroup == "back")
         println("Which workout? 'deadlift' 'pull downs' 'rows'")
-      workoutName= scala.io.StdIn.readLine()
+      else
+        print("Invalid input!")
+      workoutName = scala.io.StdIn.readLine()
     }
     while(!workoutList.contains(workoutName))
     workoutName
   }
 
-  //TAKES THE INSERT VALUES FOR SET/REPS/WEIGHT
+
+
+
+
+  //OPTION 1 step 2: TAKES THE INSERT VALUES FOR SET/REPS/WEIGHT
   def createWorkoutRecord(workoutDate : String, workoutName: String, connection: Connection, user: String): Unit = {
     println("How many lbs was your set?")
     var workoutWeight = scala.io.StdIn.readLine()
@@ -146,11 +118,30 @@ object WorkoutLog {
     logWorkoutDB(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, connection, user)
   }
 
-  //METHOD THAT PRINTS OUT ALL THE LOGS OF ALL USER
-  def printAllWorkoutLog(connection: Connection): Unit = {
-    val statement = connection.createStatement
-    val rs = statement.executeQuery("SELECT * FROM workouts")
-    println("Date       Workout      WT(lbs) Set   Rep   User")
+  //OPTION 1 step 3: METHOD THAT INSERTS A RECORD INTO THE WORKOUTS TABLE
+  def logWorkoutDB(date : String, name : String, weight : String, rep : String, set: String, connection: Connection, user : String): Unit ={
+    var pstmt = connection.prepareStatement("INSERT INTO workouts(workoutDate,workoutName,workoutWeight,workoutSet,workoutRep, user) VALUES(?,?,?,?,?,?)")
+    try{
+      pstmt.setDate(1, java.sql.Date.valueOf(date))
+      pstmt.setString(2, name)
+      pstmt.setInt(3, weight.toInt)
+      pstmt.setInt(4, rep.toInt)
+      pstmt.setInt(5, set.toInt)
+      pstmt.setString(6, user)
+      pstmt.executeUpdate
+      println("Your workout has been successfully log! Do you want to log more workout? y or n")
+    }
+    catch {
+      case e: IllegalArgumentException => println("Invalid Input!! Record wasn't added. Do you want to add a workout? y or n")
+    }
+  }
+
+  //OPTION 2: PRINT LOG OF THAT USER
+  def checkUser(x : String, connection: Connection): Unit = {
+    var pstmt = connection.prepareStatement("SELECT * FROM workouts WHERE user=?")
+    pstmt.setString(1,x)
+    var rs = pstmt.executeQuery()
+    println("Date       Workout        WT(lbs) Set   Rep   User")
     while (rs.next) {
       val workoutDate = rs.getDate("workoutDate")
       val workoutName= rs.getString("workoutName")
@@ -158,9 +149,39 @@ object WorkoutLog {
       val workoutSet = rs.getInt("workoutSet")
       val workoutRep = rs.getInt("workoutRep")
       val user = rs.getString("user")
-      println("%10s %-12s %-6s  %-5s %-5s %s".format(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, user))
+      println("%10s %-14s %-6s  %-5s %-5s %s".format(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, user))
     }
   }
 
+  //OPTION 4 METHOD THAT PRINTS OUT ALL THE LOGS OF ALL USER
+  def printAllWorkoutLog(connection: Connection): Unit = {
+    val statement = connection.createStatement
+    val rs = statement.executeQuery("SELECT * FROM workouts ORDER BY user")
+    println("Date       Workout        WT(lbs) Set   Rep   User")
+    while (rs.next) {
+      val workoutDate = rs.getDate("workoutDate")
+      val workoutName= rs.getString("workoutName")
+      val workoutWeight = rs.getInt("workoutWeight")
+      val workoutSet = rs.getInt("workoutSet")
+      val workoutRep = rs.getInt("workoutRep")
+      val user = rs.getString("user")
+      println("%10s %-14s %-6s  %-5s %-5s %s".format(workoutDate, workoutName, workoutWeight, workoutSet, workoutRep, user))
+    }
+  }
 
+  def deleteUserLog(user : String, connection: Connection): Unit = {
+    println("Are you sure you wanna delete your logs? y or n")
+    var yesOrNo = scala.io.StdIn.readLine()
+    if (yesOrNo=="y"){
+      var pstmt = connection.prepareStatement("DELETE FROM workouts WHERE user=?")
+      pstmt.setString(1,user)
+      pstmt.execute()
+      println("Logs deleted!")
+
+    }
+    else if (yesOrNo=="n")
+      println("Logs not deleted")
+    else
+      println("Invalid input!")
+  }
 }
